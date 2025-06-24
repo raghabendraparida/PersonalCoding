@@ -1,0 +1,69 @@
+import re
+
+def remove_unused_columns_from_feature(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    output_lines = []
+    scenario_steps = []
+    in_examples = False
+    example_headers = []
+    example_rows = []
+    used_columns = set()
+
+    for line in lines:
+        stripped = line.strip()
+
+        if stripped.startswith("Scenario Outline:"):
+            scenario_steps = []
+            output_lines.append(line)
+            in_examples = False
+            continue
+
+        if stripped.startswith("Examples:"):
+            in_examples = True
+            example_headers = []
+            example_rows = []
+            output_lines.append(line)
+            continue
+
+        if in_examples:
+            if stripped.startswith("|"):
+                if not example_headers:
+                    example_headers = [h.strip() for h in stripped.strip('|').split('|')]
+                else:
+                    example_rows.append([v.strip() for v in stripped.strip('|').split('|')])
+            else:
+                # End of examples section
+                in_examples = False
+                # Determine used columns
+                for step in scenario_steps:
+                    for header in example_headers:
+                        if f"<{header}>" in step:
+                            used_columns.add(header)
+
+                # Filter columns
+                indices = [i for i, h in enumerate(example_headers) if h in used_columns]
+                filtered_headers = [example_headers[i] for i in indices]
+                filtered_rows = [[row[i] for i in indices] for row in example_rows]
+
+                # Write filtered examples
+                output_lines.append("    | " + " | ".join(filtered_headers) + " |\n")
+                for row in filtered_rows:
+                    output_lines.append("    | " + " | ".join(row) + " |\n")
+
+                # Reset for next scenario
+                used_columns.clear()
+                continue
+
+        if not in_examples:
+            if stripped and not stripped.startswith("Scenario Outline:") and not stripped.startswith("Examples:"):
+                scenario_steps.append(stripped)
+            output_lines.append(line)
+
+    return ''.join(output_lines)
+
+# Example usage:
+# cleaned_content = remove_unused_columns_from_feature("path/to/your.feature")
+# with open("path/to/cleaned.feature", "w") as f:
+#     f.write(cleaned_content)
