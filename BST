@@ -1,0 +1,38 @@
+class TreeNode:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+class SecondLargestFinder:
+    def __init__(self):
+        self.count = 0
+        self.result = None
+
+    def find_second_largest(self, root):
+        self._reverse_inorder(root)
+        return self.result
+
+    def _reverse_inorder(self, node):
+        if not node or self.count >= 2:
+            return
+
+        self._reverse_inorder(node.right)
+
+        self.count += 1
+        if self.count == 2:
+            self.result = node.val
+            return
+
+        self._reverse_inorder(node.left)
+
+# Example usage
+if __name__ == "__main__":
+    root = TreeNode(20)
+    root.left = TreeNode(10)
+    root.right = TreeNode(30)
+    root.right.left = TreeNode(25)
+    root.right.right = TreeNode(35)
+
+    finder = SecondLargestFinder()
+    print("Second largest element:", finder.find_second_largest(root))
