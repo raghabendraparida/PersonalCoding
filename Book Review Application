@@ -1,0 +1,50 @@
+from flask import Flask, request, jsonify
+import uuid
+
+app = Flask(__name__)
+reviews = []
+
+# GET all reviews
+@app.route("/reviews", methods=["GET"])
+def get_reviews():
+    return jsonify(reviews)
+
+# POST a new review
+@app.route("/reviews", methods=["POST"])
+def add_review():
+    data = request.json
+    required = ["book_name", "review", "rating"]
+
+    for field in required:
+        if field not in data:
+            return jsonify({"error": f"{field} is required"}), 400
+
+    if not (1 <= data["rating"] <= 5):
+        return jsonify({"error": "Rating must be between 1 and 5"}), 400
+
+    data["id"] = str(uuid.uuid4())
+    reviews.append(data)
+    return jsonify({"message": "Review added", "review": data}), 201
+
+# PUT to update a review
+@app.route("/reviews/<review_id>", methods=["PUT"])
+def update_review(review_id):
+    data = request.json
+    for review in reviews:
+        if review["id"] == review_id:
+            review.update(data)
+            return jsonify({"message": "Review updated", "review": review}), 200
+    return jsonify({"error": "Review not found"}), 404
+
+# DELETE a review
+@app.route("/reviews/<review_id>", methods=["DELETE"])
+def delete_review(review_id):
+    global reviews
+    updated_reviews = [r for r in reviews if r.get("id") != review_id]
+    if len(updated_reviews) == len(reviews):
+        return jsonify({"error": "Review not found"}), 404
+    reviews = updated_reviews
+    return jsonify({"message": "Review deleted"}), 200
+
+if __name__ == "__main__":
+    app.run(debug=True)
